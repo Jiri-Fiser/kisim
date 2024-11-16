@@ -2,6 +2,7 @@ import simpy
 from math import exp
 from random import uniform, expovariate
 
+
 class Activity:
     instance_count = 0
     DEBUG = True
