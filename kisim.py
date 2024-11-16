@@ -1,10 +1,11 @@
 import simpy
 from math import exp
-from random import uniform
+from random import uniform, expovariate
 
 class Activity:
     instance_count = 0
     DEBUG = True
+    trace_queue = []
 
     def __init__(self, env:simpy.Environment):
         self.env = env
@@ -30,6 +31,14 @@ class Activity:
             else:
                 print(f"{timeFormatter(self.now)}: {event} [{self.ident}]")
 
+
+    def tracex(self, event, timeFormatter=None):
+        if Activity.DEBUG:
+            if timeFormatter is None:
+                Activity.trace_queue.append(f"{self.now:8.2f}: {event} [{self.ident}]")
+            else:
+                Activity.trace_queue.append(f"{timeFormatter(self.now)}: {event} [{self.ident}]")
+
 class Collector(Activity):
     def __init__(self, env, tick, collect=None):
         super().__init__(env)
@@ -51,15 +60,29 @@ class ExpFactory(Activity):
         self.mean = mean
         self.produceFunction = produceFunction if produceFunction is not None else self.produce
 
-    def lifetime(self):
+    def lifetime2(self):
         while True:
             lamda = 1.0 / self.mean(self.now)
-            p = lamda * exp(-lamda)
-            while p > 1e-6:
+            p = 1 - exp(-lamda)
+            while True: # lze nahradit generovat jako poisson
                 r = uniform(0, 1)
                 if r < p:
                     self.produceFunction()
-                p *= p
+                else:
+                    break
+            yield self.env.timeout(1)  # rovnoměrně rozdělit
+
+    def lifetime(self):
+        while True:
+            lamda = self.mean(self.now)
+            p = expovariate(lamda)
+            cp = int(p)
+            pp = p - cp
+            for i in range(cp):
+                self.produceFunction()
+            r = uniform(0, 1)
+            if r < pp:
+                self.produceFunction()
             yield self.env.timeout(1)
 
     def produce(self):

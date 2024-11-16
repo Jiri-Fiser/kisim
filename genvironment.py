@@ -1,3 +1,5 @@
+import math
+
 from simpy import Environment
 from tkinter import Canvas, Tk
 from tkinter.font import Font
@@ -23,10 +25,18 @@ class Bar:
     def ypos(self, rely=0, shifty=0):
         return (self.y + rely) * self.genv.grid_size + shifty
 
+    def moveDx(self, dx, dy):
+        self.x += dx
+        self.y += dy
+
+    def moveAt(self, x, y):
+        self.x = x
+        self.y = y
+
 
 class InfoBar(Bar):
     def __init__(self, string_getter: Callable[['GEnvironment'], Any], x: int, y:int,
-                 width: int, fillColor: str, textColor: str):
+                 width: int, fillColor: str="black", textColor: str="white"):
         """
         Create bar which displays text from simulation environment
         :param string_getter: function which get displayed object (with __str__ method)
@@ -124,7 +134,8 @@ class GEnvironment(Environment):
         for bar in self.bars:
             bar.draw()
         delta_t = self.peek() - self.now
-        self.root.after(int(delta_t * self.unit_time * 1000), self.gstep)
+        if delta_t != math.inf:
+            self.root.after(int(delta_t * self.unit_time * 1000), self.gstep)
 
     def run(self, until):
         self.untilTime = until
